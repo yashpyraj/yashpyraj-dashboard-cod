@@ -35,6 +35,8 @@ import {
   mockEvents,
   setupDiscordIntegration,
 } from "./utils/discordIntegration";
+import { MigrationPanel } from "./components/MigrationPanel";
+import { loadWeeklyDataFromSupabase, getAllianceFilesFromSupabase } from "./utils/supabaseQueries";
 
 type PageType =
   | "welcome"
@@ -44,7 +46,8 @@ type PageType =
   | "leaderboard"
   | "events"
   | "player-profile"
-  | "alliance-comparison";
+  | "alliance-comparison"
+  | "migration";
 
 function App() {
   const [availableFiles, setAvailableFiles] = useState<AllianceFile[]>([]);
@@ -60,6 +63,7 @@ function App() {
   const [comparisonPlayers, setComparisonPlayers] = useState<string[]>([]);
   const [events, setEvents] = useState<AllianceEvent[]>(mockEvents);
   const [showCreateEventModal, setShowCreateEventModal] = useState(false);
+  const [useSupabase, setUseSupabase] = useState(false);
 
   // Discord integration setup
   const discordIntegration = setupDiscordIntegration("YOUR_WEBHOOK_URL_HERE");
@@ -80,10 +84,32 @@ function App() {
 
   useEffect(() => {
     if (selectedAlliance && currentPage !== "welcome") {
-      loadAllianceData(selectedAlliance);
+      if (useSupabase) {
+        loadAllianceDataFromSupabase(selectedAlliance);
+      } else {
+        loadAllianceData(selectedAlliance);
+      }
     }
   }, [selectedAlliance, currentPage]);
 
+  const loadAllianceDataFromSupabase = async (alliance: string) => {
+    setLoading(true);
+    try {
+      console.log("Loading data from Supabase for alliance:", alliance);
+      const data = await loadWeeklyDataFromSupabase(alliance);
+      const files = await getAllianceFilesFromSupabase();
+      
+      console.log("Loaded from Supabase:", data.length, "weeks");
+      setAvailableFiles(files);
+      setWeeklyData(data);
+    } catch (error) {
+      console.error("Error loading from Supabase:", error);
+      // Fallback to CSV loading
+      await loadAllianceData(alliance);
+    } finally {
+      setLoading(false);
+    }
+  };
   const loadAllianceData = async (alliance: string) => {
     setLoading(true);
     try {
@@ -139,6 +165,15 @@ function App() {
 
   const handleComparisonRoomSelect = () => {
     setCurrentPage("alliance-comparison");
+  };
+
+  const handleMigrationSelect = () => {
+    setCurrentPage("migration");
+  };
+
+  const handleMigrationComplete = () => {
+    setUseSupabase(true);
+    setCurrentPage("welcome");
   };
 
   const handleBackToWelcome = () => {
@@ -285,6 +320,7 @@ function App() {
       <WelcomePage
         onAllianceSelect={handleAllianceSelect}
         onComparisonRoomSelect={handleComparisonRoomSelect}
+        onMigrationSelect={handleMigrationSelect}
       />
     );
   }
@@ -317,6 +353,26 @@ function App() {
     return <AllianceComparisonRoom onClose={handleBackToWelcome} />;
   }
 
+  // Show migration panel
+  if (currentPage === "migration") {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+        <div className="max-w-4xl mx-auto px-6 py-8">
+          <div className="mb-8">
+            <button
+              onClick={handleBackToWelcome}
+              className="px-4 py-2 bg-gray-800/50 text-gray-300 border border-gray-600 rounded-lg
+                       hover:bg-gray-700/50 hover:border-gray-500 transition-all duration-300 text-sm"
+            >
+              ← Back to Home
+            </button>
+          </div>
+          <MigrationPanel onMigrationComplete={handleMigrationComplete} />
+        </div>
+      </div>
+    );
+  }
+
   const navigationItems = [
     {
       id: "alliance" as PageType,
@@ -347,6 +403,12 @@ function App() {
       label: "Events",
       icon: Calendar,
       color: "text-pink-400",
+    },
+    {
+      id: "migration" as PageType,
+      label: "Migration",
+      icon: Database,
+      color: "text-cyan-400",
     },
   ];
 

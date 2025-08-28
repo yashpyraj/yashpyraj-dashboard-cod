@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js'
+import { WeeklyData, PlayerData, AllianceFile } from '../types'
 
 // Initialize Supabase client
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
@@ -325,4 +326,122 @@ export const importCSVData = async (
 
   if (error) throw error
   return data
+}
+
+/**
+ * Load weekly data from Supabase for a specific alliance
+ */
+export const loadWeeklyDataFromSupabase = async (allianceTag: string): Promise<WeeklyData[]> => {
+  const { data, error } = await supabase
+    .from('weekly_stats')
+    .select(`
+      *,
+      player:players(*),
+      alliance:alliances!inner(tag)
+    `)
+    .eq('alliance.tag', allianceTag)
+    .order('date')
+
+  if (error) {
+    console.error('Error loading weekly data:', error)
+    throw error
+  }
+
+  // Group by date
+  const weeklyDataMap = new Map<string, WeeklyData>()
+
+  data?.forEach(stat => {
+    const date = stat.date
+    if (!weeklyDataMap.has(date)) {
+      weeklyDataMap.set(date, {
+        date,
+        alliance_tag: allianceTag,
+        players: []
+      })
+    }
+
+    const weekData = weeklyDataMap.get(date)!
+    weekData.players.push({
+      lord_id: stat.player.lord_id,
+      name: stat.player.name,
+      alliance_tag: allianceTag,
+      alliance_id: stat.alliance_id || '',
+      town_center: stat.player.town_center || 0,
+      home_server: stat.player.home_server || '',
+      in_power_rankings: stat.player.in_power_rankings || false,
+      map_id: stat.player.map_id || 0,
+      faction: stat.player.faction || '',
+      power: stat.power || 0,
+      highest_power: stat.highest_power || 0,
+      legion_power: stat.legion_power || 0,
+      tech_power: stat.tech_power || 0,
+      building_power: stat.building_power || 0,
+      hero_power: stat.hero_power || 0,
+      units_killed: stat.units_killed || 0,
+      units_dead: stat.units_dead || 0,
+      units_healed: stat.units_healed || 0,
+      city_sieges: stat.city_sieges || 0,
+      defeats: stat.defeats || 0,
+      victories: stat.victories || 0,
+      scouted: stat.scouted || 0,
+      gold: stat.gold || 0,
+      wood: stat.wood || 0,
+      ore: stat.ore || 0,
+      mana: stat.mana || 0,
+      gems: stat.gems || 0,
+      resources_given: stat.resources_given || 0,
+      resources_given_count: stat.resources_given_count || 0,
+      helps_given: stat.helps_given || 0,
+      gold_spent: stat.gold_spent || 0,
+      wood_spent: stat.wood_spent || 0,
+      stone_spent: stat.stone_spent || 0,
+      mana_spent: stat.mana_spent || 0,
+      gems_spent: stat.gems_spent || 0,
+      killcount_t5: stat.killcount_t5 || 0,
+      killcount_t4: stat.killcount_t4 || 0,
+      killcount_t3: stat.killcount_t3 || 0,
+      killcount_t2: stat.killcount_t2 || 0,
+      killcount_t1: stat.killcount_t1 || 0,
+      merits: stat.merits || 0,
+    })
+  })
+
+  return Array.from(weeklyDataMap.values()).sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  )
+}
+
+/**
+ * Get available alliance files from Supabase
+ */
+export const getAllianceFilesFromSupabase = async (): Promise<AllianceFile[]> => {
+  const { data, error } = await supabase
+    .from('weekly_stats')
+    .select('date, alliance:alliances(tag)')
+    .order('date')
+
+  if (error) {
+    console.error('Error loading alliance files:', error)
+    throw error
+  }
+
+  // Create unique combinations of alliance + date
+  const fileMap = new Map<string, AllianceFile>()
+
+  data?.forEach(stat => {
+    if (stat.alliance?.tag) {
+      const key = `${stat.alliance.tag}-${stat.date}`
+      if (!fileMap.has(key)) {
+        fileMap.set(key, {
+          filename: `${stat.alliance.tag}-${stat.date}.csv`,
+          alliance_tag: stat.alliance.tag,
+          date: stat.date
+        })
+      }
+    }
+  })
+
+  return Array.from(fileMap.values()).sort((a, b) => 
+    new Date(a.date).getTime() - new Date(b.date).getTime()
+  )
 }

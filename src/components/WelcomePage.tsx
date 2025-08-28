@@ -27,11 +27,13 @@ import {
 interface WelcomePageProps {
   onAllianceSelect: (alliance: string) => void;
   onComparisonRoomSelect?: () => void;
+  onMigrationSelect?: () => void;
 }
 
 export const WelcomePage: React.FC<WelcomePageProps> = ({
   onAllianceSelect,
   onComparisonRoomSelect,
+  onMigrationSelect,
 }) => {
   const [showPinModal, setShowPinModal] = useState(false);
   const [selectedAlliance, setSelectedAlliance] = useState<string | null>(null);
@@ -281,7 +283,7 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
         </div>
 
         {/* Alliance Comparison Room */}
-        <div className="max-w-4xl mx-auto px-6 pb-16">
+        <div className="max-w-4xl mx-auto px-6 pb-8">
           <div className="text-center mb-8">
             <h2 className="text-3xl font-bold text-white mb-4 flex items-center justify-center gap-3">
               <Scale className="text-cyan-400" size={32} />
@@ -338,6 +340,73 @@ export const WelcomePage: React.FC<WelcomePageProps> = ({
               <div className="flex items-center justify-center gap-2 text-white font-semibold group-hover:gap-4 transition-all duration-300">
                 <Lock className="text-cyan-400" size={20} />
                 <span>Enter Comparison Room</span>
+                <ChevronRight
+                  size={20}
+                  className="group-hover:translate-x-1 transition-transform duration-300"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Migration Panel */}
+        <div className="max-w-4xl mx-auto px-6 pb-16">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold text-white mb-4 flex items-center justify-center gap-3">
+              <Database className="text-green-400" size={32} />
+              Database Migration
+            </h2>
+            <p className="text-gray-300 text-lg">
+              Migrate your CSV data to Supabase for enhanced performance
+            </p>
+            <p className="text-gray-400 text-sm mt-2 flex items-center justify-center gap-2">
+              <Lock className="text-green-400" size={16} />
+              One-time setup process
+            </p>
+          </div>
+
+          <div className="flex justify-center">
+            <div
+              onClick={onMigrationSelect}
+              className="glass-card p-8 cursor-pointer group hover:scale-105 transition-all duration-300 
+                        bg-green-500/10 border-green-500/30 border-2 hover:shadow-2xl hover:shadow-green-500/20 max-w-md"
+            >
+              <div className="text-center mb-6">
+                <div className="inline-flex p-4 bg-gradient-to-r from-green-500 to-blue-600 rounded-2xl mb-4 group-hover:shadow-lg transition-all duration-300">
+                  <Database className="text-white" size={32} />
+                </div>
+                <h3 className="text-2xl font-bold text-white mb-2">
+                  Start Migration
+                </h3>
+                <p className="text-green-300 text-sm font-medium">
+                  Import CSV data to Supabase
+                </p>
+              </div>
+
+              <div className="space-y-3 mb-6">
+                <div className="flex items-center justify-center py-2 px-4 bg-gray-800/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Upload size={16} className="text-gray-400" />
+                    <span className="text-gray-300">Batch CSV Import</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center py-2 px-4 bg-gray-800/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Zap size={16} className="text-gray-400" />
+                    <span className="text-gray-300">Enhanced Performance</span>
+                  </div>
+                </div>
+                <div className="flex items-center justify-center py-2 px-4 bg-gray-800/30 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Shield size={16} className="text-gray-400" />
+                    <span className="text-gray-300">Data Integrity</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-center gap-2 text-white font-semibold group-hover:gap-4 transition-all duration-300">
+                <Database className="text-green-400" size={20} />
+                <span>Start Migration</span>
                 <ChevronRight
                   size={20}
                   className="group-hover:translate-x-1 transition-transform duration-300"
