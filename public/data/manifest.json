@@ -1,0 +1,22 @@
+{
+  "files": [
+    "BR-2025-06-28.csv",
+    "BR-2025-07-27.csv",
+    "BR-2025-08-03.csv",
+    "BR-2025-08-11.csv",
+    "BTX-2025-07-02.csv",
+    "BTX-2025-07-28.csv",
+    "BTX-2025-08-01.csv",
+    "BTX-2025-08-08.csv",
+    "BTX-2025-08-10.csv",
+    "Echo-2025-07-25.csv",
+    "Echo-2025-08-02.csv",
+    "Echo-2025-08-08.csv",
+    "Echo-2025-08-10.csv",
+    "IR-2025-07-17.csv",
+    "IR-2025-08-10.csv",
+    "IR-2025-08-17.csv"
+  ],
+  "lastUpdated": "2025-01-27T00:00:00Z",
+  "description": "Available CSV data files for alliance analytics"
+}
