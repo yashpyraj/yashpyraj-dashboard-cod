@@ -22,6 +22,7 @@ import {
   X,
   Scale,
   Calendar,
+  Upload,
 } from "lucide-react";
 
 interface WelcomePageProps {
