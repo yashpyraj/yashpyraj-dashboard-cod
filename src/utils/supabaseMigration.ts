@@ -1,5 +1,6 @@
 import { supabase } from './supabaseQueries';
 import { importCSVData } from './supabaseQueries';
+import { parseCSVData } from './csvUtils';
 
 interface CSVImportResult {
   success: boolean;
@@ -18,15 +19,18 @@ export const importCSVToSupabase = async (
   filename: string
 ): Promise<CSVImportResult> => {
   try {
-    // Use the Edge Function to import CSV data with proper permissions
-    const result = await importCSVData(csvContent, filename);
+    // Parse CSV content first
+    const csvData = parseCSVData(csvContent);
     
-    // Parse filename to get alliance and date for the response
+    // Parse filename to get date
     const nameWithoutExt = filename.replace('.csv', '');
     const parts = nameWithoutExt.split('-');
     const allianceTag = parts[0];
     const date = parts.slice(1).join('-');
-
+    
+    // Use the Edge Function to import CSV data with proper permissions
+    const result = await importCSVData(csvData, filename, date);
+    
     return {
       success: result.success,
       processed: result.processed || 0,
@@ -44,8 +48,8 @@ export const importCSVToSupabase = async (
       processed: 0,
       errors: 1,
       errorDetails: [errorMsg],
-      alliance: '',
-      date: ''
+      alliance: filename.split('-')[0] || '',
+      date: filename.replace('.csv', '').split('-').slice(1).join('-') || ''
     };
   }
 };
