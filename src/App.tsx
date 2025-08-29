@@ -314,7 +314,7 @@ function App() {
   // Show welcome page if no alliance is selected
   if (
     currentPage === "welcome" ||
-    (!selectedAlliance && currentPage !== "alliance-comparison")
+    (!selectedAlliance && currentPage !== "alliance-comparison" && currentPage !== "migration")
   ) {
     return (
       <WelcomePage
