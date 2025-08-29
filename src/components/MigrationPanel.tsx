@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { Database, Upload, CheckCircle, AlertCircle, Loader, Download } from 'lucide-react';
+import { Database, Upload, CheckCircle, AlertCircle, Loader, Download, Search, BarChart3 } from 'lucide-react';
 import { batchImportAllCSVs, importCSVToSupabase } from '../utils/supabaseMigration';
+import { supabase } from '../utils/supabaseQueries';
 
 interface MigrationPanelProps {
   onMigrationComplete: () => void;
@@ -10,7 +11,49 @@ export const MigrationPanel: React.FC<MigrationPanelProps> = ({ onMigrationCompl
   const [isImporting, setIsImporting] = useState(false);
   const [importResults, setImportResults] = useState<any[]>([]);
   const [showResults, setShowResults] = useState(false);
+  const [migrationStatus, setMigrationStatus] = useState<any>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
+  const checkMigrationStatus = async () => {
+    setCheckingStatus(true);
+    try {
+      // Check players count
+      const { count: playersCount } = await supabase
+        .from('players')
+        .select('*', { count: 'exact', head: true });
+
+      // Check weekly stats count
+      const { count: statsCount } = await supabase
+        .from('weekly_stats')
+        .select('*', { count: 'exact', head: true });
+
+      // Check available dates
+      const { data: dates } = await supabase
+        .from('weekly_stats')
+        .select('date')
+        .order('date');
+
+      const uniqueDates = [...new Set(dates?.map(d => d.date) || [])];
+
+      // Check alliances
+      const { data: alliances } = await supabase
+        .from('alliances')
+        .select('tag');
+
+      setMigrationStatus({
+        playersCount: playersCount || 0,
+        statsCount: statsCount || 0,
+        datesCount: uniqueDates.length,
+        dates: uniqueDates.sort(),
+        alliances: alliances?.map(a => a.tag) || []
+      });
+    } catch (error) {
+      console.error('Error checking migration status:', error);
+      setMigrationStatus({ error: 'Failed to check status' });
+    } finally {
+      setCheckingStatus(false);
+    }
+  };
   const handleBatchImport = async () => {
     setIsImporting(true);
     setImportResults([]);
@@ -111,6 +154,25 @@ export const MigrationPanel: React.FC<MigrationPanelProps> = ({ onMigrationCompl
               className="hidden"
             />
           </label>
+
+          {/* Status Checker */}
+          <button
+            onClick={checkMigrationStatus}
+            disabled={checkingStatus}
+            className="p-6 bg-gradient-to-r from-indigo-500 to-purple-600 text-white rounded-lg
+                     hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 
+                     disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-3"
+          >
+            {checkingStatus ? (
+              <Loader className="animate-spin" size={24} />
+            ) : (
+              <Search size={24} />
+            )}
+            <div className="text-left">
+              <div className="font-semibold">Check Migration Status</div>
+              <div className="text-sm opacity-90">Verify imported data</div>
+            </div>
+          </button>
         </div>
       </div>
 
@@ -127,6 +189,70 @@ export const MigrationPanel: React.FC<MigrationPanelProps> = ({ onMigrationCompl
         </div>
       )}
 
+      {/* Migration Status */}
+      {migrationStatus && (
+        <div className="glass-card p-6 border border-indigo-500/20">
+          <div className="flex items-center gap-3 mb-6">
+            <BarChart3 className="text-indigo-400" size={24} />
+            <div>
+              <h3 className="text-lg font-semibold text-white">Migration Status</h3>
+              <p className="text-gray-300">Current database state</p>
+            </div>
+          </div>
+
+          {migrationStatus.error ? (
+            <div className="text-red-400">{migrationStatus.error}</div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
+                <div className="text-2xl font-bold text-blue-300">{migrationStatus.playersCount}</div>
+                <div className="text-sm text-gray-400">Total Players</div>
+              </div>
+              
+              <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                <div className="text-2xl font-bold text-green-300">{migrationStatus.statsCount}</div>
+                <div className="text-sm text-gray-400">Weekly Stats Records</div>
+              </div>
+              
+              <div className="bg-purple-500/10 border border-purple-500/30 rounded-lg p-4">
+                <div className="text-2xl font-bold text-purple-300">{migrationStatus.datesCount}</div>
+                <div className="text-sm text-gray-400">Unique Dates</div>
+              </div>
+              
+              <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+                <div className="text-2xl font-bold text-yellow-300">{migrationStatus.alliances.length}</div>
+                <div className="text-sm text-gray-400">Alliances</div>
+              </div>
+            </div>
+          )}
+
+          {migrationStatus.dates && migrationStatus.dates.length > 0 && (
+            <div className="mt-6">
+              <h4 className="text-white font-medium mb-3">Available Dates:</h4>
+              <div className="flex flex-wrap gap-2">
+                {migrationStatus.dates.map((date: string) => (
+                  <span key={date} className="px-3 py-1 bg-gray-700 text-gray-300 rounded-full text-sm">
+                    {date}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {migrationStatus.alliances && migrationStatus.alliances.length > 0 && (
+            <div className="mt-4">
+              <h4 className="text-white font-medium mb-3">Alliances:</h4>
+              <div className="flex flex-wrap gap-2">
+                {migrationStatus.alliances.map((alliance: string) => (
+                  <span key={alliance} className="px-3 py-1 bg-indigo-600 text-white rounded-full text-sm font-medium">
+                    {alliance}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      )}
       {/* Results */}
       {showResults && importResults.length > 0 && (
         <div className="glass-card p-6 border border-gray-600/20">
