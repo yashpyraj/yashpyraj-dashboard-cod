@@ -1,6 +1,46 @@
 import { supabase } from './supabaseQueries';
 import { parseCSVData } from './csvUtils';
 
+/**
+ * Ensure all required alliances exist in the database
+ */
+const ensureAlliancesExist = async (): Promise<void> => {
+  const requiredAlliances = [
+    { tag: 'BR', name: 'Brotherhood' },
+    { tag: 'BTX', name: 'Biotoxin' },
+    { tag: 'Echo', name: 'Echo Alliance' },
+    { tag: 'IR', name: 'Iron Ravens' }
+  ];
+
+  for (const alliance of requiredAlliances) {
+    const { data, error } = await supabase
+      .from('alliances')
+      .select('id')
+      .eq('tag', alliance.tag)
+      .maybeSingle();
+
+    if (error && error.code !== 'PGRST116') {
+      throw new Error(`Error checking alliance ${alliance.tag}: ${error.message}`);
+    }
+
+    if (!data) {
+      // Alliance doesn't exist, create it
+      const { error: insertError } = await supabase
+        .from('alliances')
+        .insert({
+          tag: alliance.tag,
+          name: alliance.name
+        });
+
+      if (insertError) {
+        throw new Error(`Failed to create alliance ${alliance.tag}: ${insertError.message}`);
+      }
+      
+      console.log(`✅ Created alliance: ${alliance.tag}`);
+    }
+  }
+};
+
 interface CSVImportResult {
   success: boolean;
   processed: number;
@@ -37,15 +77,22 @@ export const importCSVToSupabase = async (
     const players = parseCSVData(csvContent);
     console.log(`Parsed ${players.length} players from ${filename}`);
 
+    // Ensure alliances exist before proceeding
+    await ensureAlliancesExist();
+
     // Get alliance ID
     const { data: alliance, error: allianceError } = await supabase
       .from('alliances')
       .select('id')
       .eq('tag', allianceTag)
-      .single();
+      .maybeSingle();
 
-    if (allianceError || !alliance) {
-      throw new Error(`Alliance not found: ${allianceTag}`);
+    if (allianceError && allianceError.code !== 'PGRST116') {
+      throw new Error(`Error fetching alliance ${allianceTag}: ${allianceError.message}`);
+    }
+
+    if (!alliance) {
+      throw new Error(`Alliance not found after creation attempt: ${allianceTag}`);
     }
 
     let processedCount = 0;
